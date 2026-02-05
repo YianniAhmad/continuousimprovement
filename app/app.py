@@ -5,8 +5,6 @@ from functools import wraps
 from openai import OpenAI
 import os
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 
 app = Flask(__name__)
 
@@ -175,7 +173,11 @@ def form_results(form_id: int):
 @login_required
 def generate_summary(form_id: int):
     user_id = session["user_id"]
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return "OPENAI_API_KEY not set on server", 500
 
+    client = OpenAI(api_key=api_key)
     with get_conn() as conn:
         form = conn.execute(
             "SELECT * FROM forms WHERE id = ? AND owner_id = ?",
