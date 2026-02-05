@@ -1,0 +1,97 @@
+* { box-sizing: border-box; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #ffffff, #ffffff);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 3rem;
+}
+
+.container {
+  background: white;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.brand { margin: 0; font-size: 1.5rem; }
+.brand-link { text-decoration: none; color: #333; }
+
+.nav { display: flex; gap: 0.75rem; }
+
+.link-btn {
+  display: inline-block;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #667eea;
+  color: white;
+  border: none;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+}
+
+.link-btn.small { padding: 0.5rem 0.75rem; }
+
+.table-card {
+  background: #f7f8ff;
+  border: 1px solid #e6e8ff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.history-table { width: 100%; border-collapse: collapse; }
+.history-table thead th {
+  text-align: left;
+  padding: 0.9rem 1rem;
+  background: rgba(102, 126, 234, 0.15);
+}
+.history-table tbody td { padding: 0.9rem 1rem; border-top: 1px solid #e6e8ff; }
+.history-table tbody tr:hover { background: rgba(102, 126, 234, 0.08); }
+
+.form { display: flex; flex-direction: column; gap: 0.75rem; }
+input, textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:hover { background: #5a67d8; }
+
+.muted { color: #666; margin-top: 0; }
+.empty { padding: 1rem; margin: 0; color: #555; }
+.error { color: #b00020; font-weight: 700; }
+
+.q-row { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.secondary {
+  background: #fff;
+  border: 1px solid #d7dbff;
+  color: #4a55c7;
+}
+.secondary:hover { background: #f0f2ff; }
+
+hr { border: 0; border-top: 1px solid #eee; margin: 1rem 0; }

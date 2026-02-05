@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Results – {{ form["title"] }}{% endblock %}
+
+{% block content %}
+<h2>Results: {{ form["title"] }}</h2>
+<p class="muted">Responses collected for this form</p>
+
+<div class="table-card">
+  <table class="history-table">
+    <thead>
+      <tr>
+        <th>Question</th>
+        <th>Answer</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <form method="post" action="{{ url_for('generate_summary', form_id=form['id']) }}">
+    <button type="submit">Generate AI Summary</button>
+    </form>
+
+    {% if summary %}
+    <div class="result" style="margin-top: 1rem;">
+        <h3>AI Summary</h3>
+        <pre style="white-space: pre-wrap; margin:0;">{{ summary }}</pre>
+    </div>
+    {% endif %}
+    <tbody>
+      {% for a in answers %}
+      <tr>
+        <td>{{ a["question_text"] }}</td>
+        <td>{{ a["answer_text"] }}</td>
+        <td>{{ a["created_at"] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if answers|length == 0 %}
+    <p class="empty">No responses yet.</p>
+  {% endif %}
+</div>
+
+<a class="link-btn" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+{% endblock %}

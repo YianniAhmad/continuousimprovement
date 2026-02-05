@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Continuous Improvement{% endblock %}
+
+{% block content %}
+  <h2>Your forms</h2>
+
+  <div class="table-card">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Created</th>
+          <th>Links</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for form in forms %}
+          <tr>
+            <td>{{ form["title"] }}</td>
+            <td>{{ form["created_at"] }}</td>
+            <td>
+              <a class="link" href="{{ url_for('form_page', form_id=form['id']) }}">
+                Public link
+              </a>
+              |
+              <a class="link" href="{{ url_for('form_results', form_id=form['id']) }}">
+                View results
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if forms|length == 0 %}
+      <p class="empty">No forms yet. Create one to get started.</p>
+    {% endif %}
+  </div>
+{% endblock %}
