@@ -7,6 +7,7 @@ import os
 
 
 app = Flask(__name__)
+init_db()
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-fallback")
 

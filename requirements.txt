@@ -2,3 +2,4 @@ Flask
 gunicorn
 openai
 werkzeug
+psycopg[binary]
