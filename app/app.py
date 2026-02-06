@@ -291,6 +291,7 @@ FEEDBACK (Q&A):
 
 
 @app.route("/dashboard/forms/<int:form_id>/delete", methods=["POST"])
+#comment to test functionality
 @login_required
 def delete_form(form_id: int):
     p = placeholder()
