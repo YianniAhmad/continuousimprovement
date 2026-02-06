@@ -15,7 +15,7 @@
       </tr>
     </thead>
     <form method="post" action="{{ url_for('generate_summary', form_id=form['id']) }}">
-    <button type="submit">Generate AI Summary</button>
+    <button type="submit" class="link-btn small">Generate AI Summary</button>
     </form>
 
     {% if summary %}
