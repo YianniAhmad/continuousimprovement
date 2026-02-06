@@ -228,11 +228,32 @@ FEEDBACK (Q&A):
 {qa_text}
 """.strip()
 
-    # Call OpenAI Responses API (recommended generation endpoint) :contentReference[oaicite:2]{index=2}
+    # call openai api
     resp = client.responses.create(
-        model="gpt-4.1-mini",  # good cost/perf starter; you can switch later
+        model="gpt-4.1-mini",  
         input=prompt,
     )
+@app.route("/dashboard/forms/<int:form_id>/delete", methods=["POST"])
+
+@login_required
+def delete_form(form_id: int):
+    user_id = session["user_id"]
+
+    with get_conn() as conn:
+        
+        form = conn.execute(
+            "SELECT id FROM forms WHERE id = ? AND owner_id = ?",
+            (form_id, user_id),
+        ).fetchone()
+
+        if form is None:
+            return "Not found", 404
+
+        
+        conn.execute("DELETE FROM forms WHERE id = ? AND owner_id = ?", (form_id, user_id))
+        conn.commit()
+
+        return redirect(url_for("dashboard"))
 
     summary_text = resp.output_text
 

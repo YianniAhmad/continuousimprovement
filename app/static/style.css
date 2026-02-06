@@ -95,3 +95,13 @@ button:hover { background: #5a67d8; }
 .secondary:hover { background: #f0f2ff; }
 
 hr { border: 0; border-top: 1px solid #eee; margin: 1rem 0; }
+
+.link-btn.danger {
+  background: #e53e3e;
+  color: white;
+  border: none;
+}
+
+.link-btn.danger:hover {
+  background: #c53030;
+}
