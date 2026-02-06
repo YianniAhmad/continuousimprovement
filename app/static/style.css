@@ -1,4 +1,8 @@
-* { box-sizing: border-box; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+/* Base reset */
+* {
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
 
 body {
   margin: 0;
@@ -10,6 +14,7 @@ body {
   padding-top: 3rem;
 }
 
+/* Layout container */
 .container {
   background: white;
   padding: 2rem 2.5rem;
@@ -19,6 +24,7 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
+/* Header */
 .header-row {
   display: flex;
   justify-content: space-between;
@@ -27,14 +33,26 @@ body {
   margin-bottom: 1.25rem;
 }
 
-.brand { margin: 0; font-size: 1.5rem; }
-.brand-link { text-decoration: none; color: #333; }
+.brand {
+  margin: 0;
+  font-size: 1.5rem;
+}
 
-.nav { display: flex; gap: 0.75rem; }
+.brand-link {
+  text-decoration: none;
+  color: #333;
+}
 
+.nav {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Buttons that look like links (used for header nav + delete etc.) */
 .link-btn {
   display: inline-block;
-  padding: 0.75rem;
+  width: auto;                 /* IMPORTANT: prevents full-width buttons in table */
+  padding: 0.75rem 1rem;
   border-radius: 8px;
   background: #667eea;
   color: white;
@@ -42,10 +60,41 @@ body {
   font-weight: 700;
   text-decoration: none;
   text-align: center;
+  cursor: pointer;
+  line-height: 1;              /* helps vertical alignment */
 }
 
-.link-btn.small { padding: 0.5rem 0.75rem; }
+.link-btn.small {
+  padding: 0.5rem 0.75rem;
+}
 
+.link-btn:hover {
+  background: #5a67d8;
+}
+
+/* Danger button */
+.link-btn.danger {
+  background: #e53e3e;
+  color: white;
+  border: none;
+}
+
+.link-btn.danger:hover {
+  background: #c53030;
+}
+
+/* Plain text links used in table (you use class="link") */
+.link {
+  color: #4a55c7;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.link:hover {
+  color: #3641b2;
+}
+
+/* Table card */
 .table-card {
   background: #f7f8ff;
   border: 1px solid #e6e8ff;
@@ -53,23 +102,59 @@ body {
   overflow: hidden;
 }
 
-.history-table { width: 100%; border-collapse: collapse; }
+/* Table */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 .history-table thead th {
   text-align: left;
   padding: 0.9rem 1rem;
   background: rgba(102, 126, 234, 0.15);
+  font-weight: 800;
 }
-.history-table tbody td { padding: 0.9rem 1rem; border-top: 1px solid #e6e8ff; }
-.history-table tbody tr:hover { background: rgba(102, 126, 234, 0.08); }
 
-.form { display: flex; flex-direction: column; gap: 0.75rem; }
+.history-table tbody td {
+  padding: 0.9rem 1rem;
+  border-top: 1px solid #e6e8ff;
+  vertical-align: middle;
+}
+
+.history-table tbody tr:hover {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+/* Make the Links column behave like inline actions */
+.history-table td:last-child {
+  white-space: nowrap;       /* keeps actions on one line */
+}
+
+.history-table td:last-child form {
+  display: inline;           /* form doesn’t break layout */
+  margin-left: 0.5rem;       /* space before delete */
+}
+
+.history-table td:last-child .link {
+  margin-right: 0.35rem;
+}
+
+/* Forms */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 input, textarea {
   width: 100%;
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid #ccc;
 }
-button {
+
+/* IMPORTANT: only full-width buttons inside .form */
+.form button {
   width: 100%;
   padding: 0.75rem;
   background: #667eea;
@@ -79,29 +164,47 @@ button {
   font-weight: 700;
   cursor: pointer;
 }
-button:hover { background: #5a67d8; }
 
-.muted { color: #666; margin-top: 0; }
-.empty { padding: 1rem; margin: 0; color: #555; }
-.error { color: #b00020; font-weight: 700; }
+.form button:hover {
+  background: #5a67d8;
+}
 
-.q-row { display: flex; flex-direction: column; gap: 0.4rem; }
+/* Helpers */
+.muted {
+  color: #666;
+  margin-top: 0;
+}
 
+.empty {
+  padding: 1rem;
+  margin: 0;
+  color: #555;
+}
+
+.error {
+  color: #b00020;
+  font-weight: 700;
+}
+
+.q-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Secondary button (if you use it) */
 .secondary {
   background: #fff;
   border: 1px solid #d7dbff;
   color: #4a55c7;
 }
-.secondary:hover { background: #f0f2ff; }
 
-hr { border: 0; border-top: 1px solid #eee; margin: 1rem 0; }
-
-.link-btn.danger {
-  background: #e53e3e;
-  color: white;
-  border: none;
+.secondary:hover {
+  background: #f0f2ff;
 }
 
-.link-btn.danger:hover {
-  background: #c53030;
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+  margin: 1rem 0;
 }

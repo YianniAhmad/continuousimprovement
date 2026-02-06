@@ -26,6 +26,14 @@
               <a class="link" href="{{ url_for('form_results', form_id=form['id']) }}">
                 View results
               </a>
+              |
+              <form method="post"
+                    action="{{ url_for('delete_form', form_id=form['id']) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Delete this form and all its answers? This cannot be undone.');">
+                <button type="submit" class="link-btn danger">Delete</button>
+              </form>
+
             </td>
           </tr>
         {% endfor %}

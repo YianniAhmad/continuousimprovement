@@ -252,7 +252,7 @@ def generate_summary(form_id: int):
     qa_text = "\n\n".join(qa_lines) if qa_lines else "No answers yet."
 
     prompt = f"""
-You are an operations-style feedback analyst for a team.
+You are an operations style feedback analyst for a team.
 
 Given the following anonymous feedback answers, produce:
 1) Top 5 recurring themes (ranked, with brief evidence)
@@ -265,6 +265,7 @@ Rules:
 - Be specific and practical.
 - Don’t invent facts.
 - If data is thin, say so.
+- Within your reply, NEVER use boldings ** or * as it does not format properly. Keep it to plain normal text only.
 
 FORM TITLE: {form['title']}
 FORM DESCRIPTION: {form['description']}
