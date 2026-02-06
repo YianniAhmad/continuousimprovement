@@ -1,29 +1,55 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-from app.database import init_db, get_conn
-from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
-from openai import OpenAI
 import os
+from functools import wraps
 
+from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
+from openai import OpenAI
+
+from app.database import (
+    init_db,
+    get_conn,
+    placeholder,
+    returning_id_clause,
+    get_inserted_id,
+)
 
 app = Flask(__name__)
+
+# IMPORTANT: set this on Render as a stable env var so sessions don't break on deploys
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-fallback")
+
+# Create tables if missing (safe: uses CREATE TABLE IF NOT EXISTS)
 init_db()
 
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-fallback")
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        return view_func(*args, **kwargs)
+
+    return wrapper
+
 
 @app.route("/")
 def home():
-    return "working" and render_template("home.html")
+    # You had: return "working" and render_template("home.html")
+    # This always returns the template (because "working" is truthy). Keep it simple:
+    return render_template("home.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    p = placeholder()
+
     if request.method == "POST":
         email = request.form["email"].strip().lower()
         password = request.form["password"]
 
         with get_conn() as conn:
             user = conn.execute(
-                "SELECT * FROM users WHERE email = ?",
+                f"SELECT * FROM users WHERE email = {p}",
                 (email,),
             ).fetchone()
 
@@ -37,32 +63,58 @@ def login():
     return render_template("login.html")
 
 
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    p = placeholder()
+
+    if request.method == "POST":
+        email = request.form["email"].strip().lower()
+        password = request.form["password"]
+
+        if not email or not password:
+            return render_template("register.html", error="Email and password required.")
+
+        with get_conn() as conn:
+            try:
+                conn.execute(
+                    f"INSERT INTO users (email, password_hash) VALUES ({p}, {p})",
+                    (email, generate_password_hash(password)),
+                )
+                conn.commit()
+            except Exception:
+                return render_template("register.html", error="Email already registered.")
+
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
 
 
-def login_required(view_func):
-    @wraps(view_func)
-    def wrapper(*args, **kwargs):
-        if "user_id" not in session:
-            return redirect(url_for("login"))
-        return view_func(*args, **kwargs)
-    return wrapper
-
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("home"))
 
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    p = placeholder()
     user_id = session["user_id"]
+
     with get_conn() as conn:
         forms = conn.execute(
-            "SELECT * FROM forms WHERE owner_id = ? ORDER BY id DESC",
+            f"SELECT * FROM forms WHERE owner_id = {p} ORDER BY id DESC",
             (user_id,),
         ).fetchall()
+
     return render_template("dashboard.html", forms=forms)
+
 
 @app.route("/forms/new", methods=["GET", "POST"])
 @login_required
 def create_form():
+    p = placeholder()
+
     if request.method == "POST":
         title = request.form["title"].strip()
         description = request.form.get("description", "").strip()
@@ -77,15 +129,18 @@ def create_form():
 
         with get_conn() as conn:
             cur = conn.cursor()
+
             cur.execute(
-                "INSERT INTO forms (owner_id, title, description) VALUES (?, ?, ?)",
+                f"INSERT INTO forms (owner_id, title, description) "
+                f"VALUES ({p}, {p}, {p}){returning_id_clause()}",
                 (owner_id, title, description),
             )
-            form_id = cur.lastrowid
+            form_id = get_inserted_id(cur)
 
             for idx, q in enumerate(questions, start=1):
                 cur.execute(
-                    "INSERT INTO questions (form_id, question_text, position) VALUES (?, ?, ?)",
+                    f"INSERT INTO questions (form_id, question_text, position) "
+                    f"VALUES ({p}, {p}, {p})",
                     (form_id, q, idx),
                 )
 
@@ -98,17 +153,20 @@ def create_form():
 
 @app.route("/forms/<int:form_id>", methods=["GET", "POST"])
 def form_page(form_id: int):
+    p = placeholder()
+
     with get_conn() as conn:
         form = conn.execute(
-            "SELECT * FROM forms WHERE id = ?", (form_id,)
+            f"SELECT * FROM forms WHERE id = {p}",
+            (form_id,),
         ).fetchone()
 
         if form is None:
             return "Form not found", 404
 
         questions = conn.execute(
-            "SELECT * FROM questions WHERE form_id = ? ORDER BY position ASC",
-            (form_id,)
+            f"SELECT * FROM questions WHERE form_id = {p} ORDER BY position ASC",
+            (form_id,),
         ).fetchall()
 
         if request.method == "POST":
@@ -117,48 +175,44 @@ def form_page(form_id: int):
                 answer = request.form.get(f"q_{q['id']}", "").strip()
                 if answer:
                     cur.execute(
-                        "INSERT INTO answers (form_id, question_id, answer_text) VALUES (?, ?, ?)",
-                        (form_id, q["id"], answer)
+                        f"INSERT INTO answers (form_id, question_id, answer_text) "
+                        f"VALUES ({p}, {p}, {p})",
+                        (form_id, q["id"], answer),
                     )
             conn.commit()
 
-            return render_template(
-                "thank_you.html",
-                form=form
-            )
+            return render_template("thank_you.html", form=form)
 
-    return render_template(
-        "form.html",
-        form=form,
-        questions=questions
-    )
+    return render_template("form.html", form=form, questions=questions)
+
 
 @app.route("/dashboard/forms/<int:form_id>/results")
 @login_required
 def form_results(form_id: int):
+    p = placeholder()
     user_id = session["user_id"]
 
     with get_conn() as conn:
         form = conn.execute(
-            "SELECT * FROM forms WHERE id = ? AND owner_id = ?",
+            f"SELECT * FROM forms WHERE id = {p} AND owner_id = {p}",
             (form_id, user_id),
         ).fetchone()
+
         if form is None:
             return "Not found", 404
 
-        answers = conn.execute("""
+        answers = conn.execute(f"""
             SELECT q.question_text, a.answer_text, a.created_at
             FROM answers a
             JOIN questions q ON q.id = a.question_id
-            WHERE a.form_id = ?
+            WHERE a.form_id = {p}
             ORDER BY a.created_at DESC
         """, (form_id,)).fetchall()
 
-        # ✅ load latest saved summary (for display)
-        summary_row = conn.execute("""
+        summary_row = conn.execute(f"""
             SELECT summary_text
             FROM ai_summaries
-            WHERE form_id = ?
+            WHERE form_id = {p}
             ORDER BY id DESC
             LIMIT 1
         """, (form_id,)).fetchone()
@@ -167,43 +221,42 @@ def form_results(form_id: int):
         "form_results.html",
         form=form,
         answers=answers,
-        summary=summary_row["summary_text"] if summary_row else None
+        summary=summary_row["summary_text"] if summary_row else None,
     )
+
 
 @app.route("/dashboard/forms/<int:form_id>/summary", methods=["POST"])
 @login_required
 def generate_summary(form_id: int):
+    p = placeholder()
     user_id = session["user_id"]
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return "OPENAI_API_KEY not set on server", 500
 
     client = OpenAI(api_key=api_key)
+
     with get_conn() as conn:
         form = conn.execute(
-            "SELECT * FROM forms WHERE id = ? AND owner_id = ?",
+            f"SELECT * FROM forms WHERE id = {p} AND owner_id = {p}",
             (form_id, user_id),
         ).fetchone()
 
         if form is None:
             return "Not found", 404
 
-        # Pull all Q&A for this form
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT q.position, q.question_text, a.answer_text, a.created_at
             FROM answers a
             JOIN questions q ON q.id = a.question_id
-            WHERE a.form_id = ?
+            WHERE a.form_id = {p}
             ORDER BY q.position ASC, a.created_at DESC
         """, (form_id,)).fetchall()
 
-    # Build a compact payload for the model
-    # (If you get lots of answers later, we’ll chunk/summarize per question first.)
     qa_lines = []
     for r in rows:
-        qa_lines.append(
-            f"Q{r['position']}: {r['question_text']}\n- {r['answer_text']}"
-        )
+        qa_lines.append(f"Q{r['position']}: {r['question_text']}\n- {r['answer_text']}")
     qa_text = "\n\n".join(qa_lines) if qa_lines else "No answers yet."
 
     prompt = f"""
@@ -228,39 +281,16 @@ FEEDBACK (Q&A):
 {qa_text}
 """.strip()
 
-    # call openai api
     resp = client.responses.create(
-        model="gpt-4.1-mini",  
+        model="gpt-4.1-mini",
         input=prompt,
     )
-@app.route("/dashboard/forms/<int:form_id>/delete", methods=["POST"])
-
-@login_required
-def delete_form(form_id: int):
-    user_id = session["user_id"]
-
-    with get_conn() as conn:
-        
-        form = conn.execute(
-            "SELECT id FROM forms WHERE id = ? AND owner_id = ?",
-            (form_id, user_id),
-        ).fetchone()
-
-        if form is None:
-            return "Not found", 404
-
-        
-        conn.execute("DELETE FROM forms WHERE id = ? AND owner_id = ?", (form_id, user_id))
-        conn.commit()
-
-        return redirect(url_for("dashboard"))
 
     summary_text = resp.output_text
 
-    # Save summary to DB
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO ai_summaries (form_id, summary_text) VALUES (?, ?)",
+            f"INSERT INTO ai_summaries (form_id, summary_text) VALUES ({p}, {p})",
             (form_id, summary_text),
         )
         conn.commit()
@@ -268,40 +298,30 @@ def delete_form(form_id: int):
     return redirect(url_for("form_results", form_id=form_id))
 
 
+@app.route("/dashboard/forms/<int:form_id>/delete", methods=["POST"])
+@login_required
+def delete_form(form_id: int):
+    p = placeholder()
+    user_id = session["user_id"]
 
+    with get_conn() as conn:
+        form = conn.execute(
+            f"SELECT id FROM forms WHERE id = {p} AND owner_id = {p}",
+            (form_id, user_id),
+        ).fetchone()
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        email = request.form["email"].strip().lower()
-        password = request.form["password"]
+        if form is None:
+            return "Not found", 404
 
-        if not email or not password:
-            return render_template("register.html", error="Email and password required.")
+        conn.execute(
+            f"DELETE FROM forms WHERE id = {p} AND owner_id = {p}",
+            (form_id, user_id),
+        )
+        conn.commit()
 
-        with get_conn() as conn:
-            try:
-                conn.execute(
-                    "INSERT INTO users (email, password_hash) VALUES (?, ?)",
-                    (email, generate_password_hash(password)),
-                )
-                conn.commit()
-            except Exception:
-                return render_template("register.html", error="Email already registered.")
-
-        return redirect(url_for("login"))
-
-    return render_template("register.html")
-
-
-
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("home"))
+    return redirect(url_for("dashboard"))
 
 
 if __name__ == "__main__":
-    init_db()
+    # debug=True locally; in Render you typically run via gunicorn.
     app.run(debug=True, port=9292)

@@ -1,14 +1,46 @@
 import os
 import sqlite3
 from contextlib import contextmanager
-from typing import Iterator, Any
+from typing import Iterator, Any, Optional
 
-DATABASE_URL = os.getenv("DATABASE_URL")  # Render Postgres will set this
+DATABASE_URL = os.getenv("DATABASE_URL")  # On Render this should be a full postgres://... URL
 SQLITE_PATH = os.path.join(os.path.dirname(__file__), "continuousco.db")
 
 
 def _is_postgres() -> bool:
-    return bool(DATABASE_URL) and DATABASE_URL.startswith("postgres")
+    """
+    Render sets DATABASE_URL like:
+      postgres://user:pass@host:5432/dbname
+      postgresql://user:pass@host:5432/dbname
+    """
+    if not DATABASE_URL:
+        return False
+    return DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")
+
+
+def placeholder() -> str:
+    """SQL parameter placeholder for the active DB."""
+    return "%s" if _is_postgres() else "?"
+
+
+def returning_id_clause() -> str:
+    """Postgres supports RETURNING id; SQLite doesn't need it (use lastrowid)."""
+    return " RETURNING id" if _is_postgres() else ""
+
+
+def get_inserted_id(cur: Any) -> int:
+    """
+    After an INSERT:
+      - Postgres: fetchone()[0] from RETURNING id
+      - SQLite: cursor.lastrowid
+    """
+    if _is_postgres():
+        row = cur.fetchone()
+        if not row:
+            raise RuntimeError("Expected an id row from Postgres RETURNING id, got nothing.")
+        # row could be tuple-like or dict-like depending on cursor settings
+        return int(row[0])
+    return int(cur.lastrowid)
 
 
 @contextmanager
@@ -22,6 +54,8 @@ def get_conn() -> Iterator[Any]:
         import psycopg
         from psycopg.rows import dict_row
 
+        # Render Postgres typically works fine with this.
+        # If you ever hit SSL errors, add sslmode="require" below.
         conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
         try:
             yield conn
@@ -30,6 +64,8 @@ def get_conn() -> Iterator[Any]:
     else:
         conn = sqlite3.connect(SQLITE_PATH)
         conn.row_factory = sqlite3.Row
+        # Ensure SQLite enforces foreign keys if you use them
+        conn.execute("PRAGMA foreign_keys = ON;")
         try:
             yield conn
         finally:
