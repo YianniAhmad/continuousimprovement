@@ -14,11 +14,9 @@ from app.database import (
 )
 
 app = Flask(__name__)
-
-# IMPORTANT: set this on Render as a stable env var so sessions don't break on deploys
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-fallback")
 
-# Create tables if missing (safe: uses CREATE TABLE IF NOT EXISTS)
+# Create tables if missing
 init_db()
 
 
@@ -28,14 +26,11 @@ def login_required(view_func):
         if "user_id" not in session:
             return redirect(url_for("login"))
         return view_func(*args, **kwargs)
-
     return wrapper
 
 
 @app.route("/")
 def home():
-    # You had: return "working" and render_template("home.html")
-    # This always returns the template (because "working" is truthy). Keep it simple:
     return render_template("home.html")
 
 
@@ -131,16 +126,14 @@ def create_form():
             cur = conn.cursor()
 
             cur.execute(
-                f"INSERT INTO forms (owner_id, title, description) "
-                f"VALUES ({p}, {p}, {p}){returning_id_clause()}",
+                f"INSERT INTO forms (owner_id, title, description) VALUES ({p}, {p}, {p}){returning_id_clause()}",
                 (owner_id, title, description),
             )
             form_id = get_inserted_id(cur)
 
             for idx, q in enumerate(questions, start=1):
                 cur.execute(
-                    f"INSERT INTO questions (form_id, question_text, position) "
-                    f"VALUES ({p}, {p}, {p})",
+                    f"INSERT INTO questions (form_id, question_text, position) VALUES ({p}, {p}, {p})",
                     (form_id, q, idx),
                 )
 
@@ -175,8 +168,7 @@ def form_page(form_id: int):
                 answer = request.form.get(f"q_{q['id']}", "").strip()
                 if answer:
                     cur.execute(
-                        f"INSERT INTO answers (form_id, question_id, answer_text) "
-                        f"VALUES ({p}, {p}, {p})",
+                        f"INSERT INTO answers (form_id, question_id, answer_text) VALUES ({p}, {p}, {p})",
                         (form_id, q["id"], answer),
                     )
             conn.commit()
@@ -323,5 +315,4 @@ def delete_form(form_id: int):
 
 
 if __name__ == "__main__":
-    # debug=True locally; in Render you typically run via gunicorn.
     app.run(debug=True, port=9292)
