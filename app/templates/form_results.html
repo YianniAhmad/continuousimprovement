@@ -11,7 +11,7 @@
       <tr>
         <th>Question</th>
         <th>Answer</th>
-        <th>Time</th>
+       >
       </tr>
     </thead>
     <form method="post" action="{{ url_for('generate_summary', form_id=form['id']) }}">
@@ -29,7 +29,6 @@
       <tr>
         <td>{{ a["question_text"] }}</td>
         <td>{{ a["answer_text"] }}</td>
-        <td>{{ a["created_at"] }}</td>
       </tr>
       {% endfor %}
     </tbody>

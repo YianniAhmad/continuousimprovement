@@ -19,7 +19,7 @@
             <td>{{ form["title"] }}</td>
             <td>{{ form["created_at"] }}</td>
             <td>
-              <a class="link" href="{{ url_for('form_page', form_id=form['id']) }}">
+              <a class="link" href="{{ url_for('form_page', public_id=form['public_id'])}}">
                 Public link
               </a>
               |

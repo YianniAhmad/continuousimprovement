@@ -1,7 +1,8 @@
 import os
+import secrets
 from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from openai import OpenAI
 
@@ -16,7 +17,7 @@ from app.database import (
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-fallback")
 
-# Create tables if missing
+# Create tables if missing + ensure migrations (public_id, etc.)
 init_db()
 
 
@@ -26,7 +27,13 @@ def login_required(view_func):
         if "user_id" not in session:
             return redirect(url_for("login"))
         return view_func(*args, **kwargs)
+
     return wrapper
+
+
+def generate_public_id() -> str:
+    # token_urlsafe(6) is usually ~8-10 chars, URL-safe, good for share links
+    return secrets.token_urlsafe(6)
 
 
 @app.route("/")
@@ -125,11 +132,27 @@ def create_form():
         with get_conn() as conn:
             cur = conn.cursor()
 
-            cur.execute(
-                f"INSERT INTO forms (owner_id, title, description) VALUES ({p}, {p}, {p}){returning_id_clause()}",
-                (owner_id, title, description),
-            )
-            form_id = get_inserted_id(cur)
+            # Generate token and insert. If UNIQUE collision occurs (extremely unlikely),
+            # retry a couple times.
+            for _ in range(5):
+                public_id = generate_public_id()
+                try:
+                    cur.execute(
+                        f"""
+                        INSERT INTO forms (public_id, owner_id, title, description)
+                        VALUES ({p}, {p}, {p}, {p})
+                        {returning_id_clause()}
+                        """,
+                        (public_id, owner_id, title, description),
+                    )
+                    form_id = get_inserted_id(cur)
+                    break
+                except Exception:
+                    # likely unique collision (or db error). We'll retry a few times.
+                    # If it's a different error, it'll fail again and we'll raise below.
+                    continue
+            else:
+                raise RuntimeError("Failed to create a unique public_id for the form.")
 
             for idx, q in enumerate(questions, start=1):
                 cur.execute(
@@ -144,18 +167,21 @@ def create_form():
     return render_template("create_form.html")
 
 
-@app.route("/forms/<int:form_id>", methods=["GET", "POST"])
-def form_page(form_id: int):
+# PUBLIC share link uses public_id token (unguessable)
+@app.route("/forms/<public_id>", methods=["GET", "POST"])
+def form_page(public_id: str):
     p = placeholder()
 
     with get_conn() as conn:
         form = conn.execute(
-            f"SELECT * FROM forms WHERE id = {p}",
-            (form_id,),
+            f"SELECT * FROM forms WHERE public_id = {p}",
+            (public_id,),
         ).fetchone()
 
         if form is None:
-            return "Form not found", 404
+            abort(404)
+
+        form_id = form["id"]
 
         questions = conn.execute(
             f"SELECT * FROM questions WHERE form_id = {p} ORDER BY position ASC",
@@ -172,12 +198,12 @@ def form_page(form_id: int):
                         (form_id, q["id"], answer),
                     )
             conn.commit()
-
             return render_template("thank_you.html", form=form)
 
     return render_template("form.html", form=form, questions=questions)
 
 
+# AUTH routes remain int form_id (fine)
 @app.route("/dashboard/forms/<int:form_id>/results")
 @login_required
 def form_results(form_id: int):
@@ -193,21 +219,27 @@ def form_results(form_id: int):
         if form is None:
             return "Not found", 404
 
-        answers = conn.execute(f"""
+        answers = conn.execute(
+            f"""
             SELECT q.question_text, a.answer_text, a.created_at
             FROM answers a
             JOIN questions q ON q.id = a.question_id
             WHERE a.form_id = {p}
             ORDER BY a.created_at DESC
-        """, (form_id,)).fetchall()
+            """,
+            (form_id,),
+        ).fetchall()
 
-        summary_row = conn.execute(f"""
+        summary_row = conn.execute(
+            f"""
             SELECT summary_text
             FROM ai_summaries
             WHERE form_id = {p}
             ORDER BY id DESC
             LIMIT 1
-        """, (form_id,)).fetchone()
+            """,
+            (form_id,),
+        ).fetchone()
 
     return render_template(
         "form_results.html",
@@ -238,13 +270,16 @@ def generate_summary(form_id: int):
         if form is None:
             return "Not found", 404
 
-        rows = conn.execute(f"""
+        rows = conn.execute(
+            f"""
             SELECT q.position, q.question_text, a.answer_text, a.created_at
             FROM answers a
             JOIN questions q ON q.id = a.question_id
             WHERE a.form_id = {p}
             ORDER BY q.position ASC, a.created_at DESC
-        """, (form_id,)).fetchall()
+            """,
+            (form_id,),
+        ).fetchall()
 
     qa_lines = []
     for r in rows:
@@ -292,7 +327,6 @@ FEEDBACK (Q&A):
 
 
 @app.route("/dashboard/forms/<int:form_id>/delete", methods=["POST"])
-#comment to test functionality
 @login_required
 def delete_form(form_id: int):
     p = placeholder()

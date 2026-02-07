@@ -3,7 +3,7 @@ import sqlite3
 from contextlib import contextmanager
 from typing import Iterator, Any
 
-DATABASE_URL = os.getenv("DATABASE_URL")  # Render should set this to a full postgres://... URL
+DATABASE_URL = os.getenv("DATABASE_URL")
 SQLITE_PATH = os.path.join(os.path.dirname(__file__), "continuousco.db")
 
 
@@ -82,10 +82,16 @@ def get_conn() -> Iterator[Any]:
 
 
 def init_db() -> None:
+    """
+    Create tables if missing and apply safe, idempotent schema upgrades.
+    """
     if _is_postgres():
         _init_postgres()
     else:
         _init_sqlite()
+
+    # Safe migration: ensure forms.public_id exists + unique index
+    ensure_forms_public_id()
 
 
 def _init_sqlite() -> None:
@@ -104,6 +110,7 @@ def _init_sqlite() -> None:
         c.execute("""
         CREATE TABLE IF NOT EXISTS forms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            public_id TEXT UNIQUE,
             owner_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             description TEXT,
@@ -160,6 +167,7 @@ def _init_postgres() -> None:
         c.execute("""
         CREATE TABLE IF NOT EXISTS forms (
             id SERIAL PRIMARY KEY,
+            public_id TEXT UNIQUE,
             owner_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             description TEXT,
@@ -196,5 +204,24 @@ def _init_postgres() -> None:
             created_at TIMESTAMP DEFAULT now()
         )
         """)
+
+        conn.commit()
+
+
+def ensure_forms_public_id() -> None:
+    """
+    Ensure forms.public_id exists + has a unique index (for existing deployments).
+    Safe to run repeatedly.
+    """
+    with get_conn() as conn:
+        c = conn.cursor()
+        if _is_postgres():
+            c.execute("ALTER TABLE forms ADD COLUMN IF NOT EXISTS public_id TEXT;")
+            c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_forms_public_id ON forms(public_id);")
+        else:
+            cols = [row[1] for row in c.execute("PRAGMA table_info(forms);").fetchall()]
+            if "public_id" not in cols:
+                c.execute("ALTER TABLE forms ADD COLUMN public_id TEXT;")
+            c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_forms_public_id ON forms(public_id);")
 
         conn.commit()
