@@ -51,7 +51,7 @@ body {
 /* Buttons that look like links (used for header nav + delete etc.) */
 .link-btn {
   display: inline-block;
-  width: auto;                 /* IMPORTANT: prevents full-width buttons in table */
+  width: auto;                 /* prevents full-width buttons in table */
   padding: 0.75rem 1rem;
   border-radius: 8px;
   background: #667eea;
@@ -105,9 +105,10 @@ body {
 /* Table */
 .history-table {
   width: 100%;
-  border-collapse: collapse;
+  table-layout: fixed; /* keep columns stable; wrap long text inside cells */
 }
 
+/* Header cells */
 .history-table thead th {
   text-align: left;
   padding: 0.9rem 1rem;
@@ -115,17 +116,19 @@ body {
   font-weight: 800;
 }
 
+/* Body cells */
 .history-table tbody td {
   padding: 0.9rem 1rem;
   border-top: 1px solid #e6e8ff;
-  vertical-align: middle;
+  vertical-align: top; /* important for long answers */
 }
 
+/* Row hover */
 .history-table tbody tr:hover {
   background: rgba(102, 126, 234, 0.08);
 }
 
-/* Make the Links column behave like inline actions */
+/* Make the Links column behave like inline actions (dashboard table) */
 .history-table td:last-child {
   white-space: nowrap;       /* keeps actions on one line */
 }
@@ -139,6 +142,30 @@ body {
   margin-right: 0.35rem;
 }
 
+/* --- Results table wrapping support (for long answers) --- */
+/* Add class="question-cell" and class="answer-cell" in results template */
+.history-table th:first-child,
+.history-table td.question-cell {
+  width: 30%;
+  vertical-align: top;
+  overflow-wrap: anywhere; /* prevent skinny column weirdness */
+  word-break: break-word;
+}
+
+.history-table th:nth-child(2),
+.history-table td.answer-cell {
+  width: 70%;
+  vertical-align: top;
+}
+
+/* Wrap long answers + preserve newlines */
+.answer-text {
+  white-space: pre-wrap;      /* keeps line breaks + wraps */
+  overflow-wrap: anywhere;    /* breaks long strings if needed */
+  word-break: break-word;     /* fallback */
+  line-height: 1.4;
+}
+
 /* Forms */
 .form {
   display: flex;
@@ -146,7 +173,8 @@ body {
   gap: 0.75rem;
 }
 
-input, textarea {
+input,
+textarea {
   width: 100%;
   padding: 0.75rem;
   border-radius: 8px;
@@ -192,7 +220,7 @@ input, textarea {
   gap: 0.4rem;
 }
 
-/* Secondary button (if you use it) */
+/* Secondary button */
 .secondary {
   background: #fff;
   border: 1px solid #d7dbff;
@@ -209,6 +237,7 @@ hr {
   margin: 1rem 0;
 }
 
+/* Make buttons inside table-card not full width */
 .table-card form button {
   width: auto;
   display: inline-block;

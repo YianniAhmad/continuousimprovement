@@ -27,8 +27,8 @@
     <tbody>
       {% for a in answers %}
       <tr>
-        <td>{{ a["question_text"] }}</td>
-        <td>{{ a["answer_text"] }}</td>
+        <td class="question-cell">{{ a["question_text"] }}</td>
+        <td class="answer-cell"><div class="answer-text">{{ a["answer_text"] }}</div></td>
       </tr>
       {% endfor %}
     </tbody>
