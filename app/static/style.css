@@ -51,7 +51,7 @@ body {
 /* Buttons that look like links (used for header nav + delete etc.) */
 .link-btn {
   display: inline-block;
-  width: auto;                 /* prevents full-width buttons in table */
+  width: auto; /* prevents full-width buttons in table */
   padding: 0.75rem 1rem;
   border-radius: 8px;
   background: #667eea;
@@ -61,7 +61,7 @@ body {
   text-decoration: none;
   text-align: center;
   cursor: pointer;
-  line-height: 1;              /* helps vertical alignment */
+  line-height: 1;
 }
 
 .link-btn.small {
@@ -105,7 +105,8 @@ body {
 /* Table */
 .history-table {
   width: 100%;
-  table-layout: fixed; /* keep columns stable; wrap long text inside cells */
+  table-layout: fixed; /* stable columns; wrap content inside cells */
+  border-collapse: collapse;
 }
 
 /* Header cells */
@@ -120,7 +121,7 @@ body {
 .history-table tbody td {
   padding: 0.9rem 1rem;
   border-top: 1px solid #e6e8ff;
-  vertical-align: top; /* important for long answers */
+  vertical-align: top;
 }
 
 /* Row hover */
@@ -128,49 +129,58 @@ body {
   background: rgba(102, 126, 234, 0.08);
 }
 
+/* --- Dashboard column widths (3 columns) --- */
+.history-table th:nth-child(1),
+.history-table td:nth-child(1) {
+  width: 32%;
+}
 
-.history-table td:last-child {
-  white-space: normal;      
+.history-table th:nth-child(2),
+.history-table td:nth-child(2) {
+  width: 30%;
+}
+
+.history-table th:nth-child(3),
+.history-table td:nth-child(3) {
+  width: 38%;
+}
+
+/* Dashboard actions column: flex wrapper INSIDE the td */
+.actions-cell {
+  vertical-align: top;
+}
+
+.actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
 }
 
-.history-table td:last-child form {
+/* Keep delete form from breaking layout */
+.actions form {
   display: inline;
   margin: 0;
 }
 
-
-.history-table td:last-child .link {
-  margin-right: 0;
-}
-
-
-.history-table th:first-child,
+/* --- Results table wrapping support (long answers) ---
+   In results template, use:
+   <td class="question-cell">...</td>
+   <td class="answer-cell"><div class="answer-text">...</div></td>
+*/
 .history-table td.question-cell {
-  width: 30%;
-  vertical-align: top;
-  overflow-wrap: anywhere; 
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
-.history-table th:nth-child(2),
-.history-table td.answer-cell {
-  width: 70%;
-  vertical-align: top;
-}
-
-
 .answer-text {
-  white-space: pre-wrap;      
-  overflow-wrap: anywhere;    
-  word-break: break-word;     
+  white-space: pre-wrap;      /* keeps new lines + wraps */
+  overflow-wrap: anywhere;    /* breaks long strings if needed */
+  word-break: break-word;
   line-height: 1.4;
 }
 
-
+/* Forms */
 .form {
   display: flex;
   flex-direction: column;
@@ -185,7 +195,7 @@ textarea {
   border: 1px solid #ccc;
 }
 
-
+/* IMPORTANT: only full-width buttons inside .form */
 .form button {
   width: 100%;
   padding: 0.75rem;
