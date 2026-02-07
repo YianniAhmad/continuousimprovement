@@ -17,8 +17,17 @@ from app.database import (
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-fallback")
 
-# Create tables if missing + ensure migrations (public_id, etc.)
+
 init_db()
+with get_conn() as conn:
+    p = placeholder()
+    rows = conn.execute("SELECT id FROM forms WHERE public_id IS NULL OR public_id = ''").fetchall()
+    for r in rows:
+        conn.execute(
+            f"UPDATE forms SET public_id = {p} WHERE id = {p}",
+            (secrets.token_urlsafe(6), r["id"]),
+        )
+    conn.commit()
 
 
 def login_required(view_func):
@@ -32,7 +41,7 @@ def login_required(view_func):
 
 
 def generate_public_id() -> str:
-    # token_urlsafe(6) is usually ~8-10 chars, URL-safe, good for share links
+
     return secrets.token_urlsafe(6)
 
 
@@ -132,8 +141,7 @@ def create_form():
         with get_conn() as conn:
             cur = conn.cursor()
 
-            # Generate token and insert. If UNIQUE collision occurs (extremely unlikely),
-            # retry a couple times.
+            
             for _ in range(5):
                 public_id = generate_public_id()
                 try:
@@ -148,8 +156,7 @@ def create_form():
                     form_id = get_inserted_id(cur)
                     break
                 except Exception:
-                    # likely unique collision (or db error). We'll retry a few times.
-                    # If it's a different error, it'll fail again and we'll raise below.
+                   
                     continue
             else:
                 raise RuntimeError("Failed to create a unique public_id for the form.")
@@ -167,7 +174,7 @@ def create_form():
     return render_template("create_form.html")
 
 
-# PUBLIC share link uses public_id token (unguessable)
+
 @app.route("/forms/<public_id>", methods=["GET", "POST"])
 def form_page(public_id: str):
     p = placeholder()
@@ -203,7 +210,7 @@ def form_page(public_id: str):
     return render_template("form.html", form=form, questions=questions)
 
 
-# AUTH routes remain int form_id (fine)
+
 @app.route("/dashboard/forms/<int:form_id>/results")
 @login_required
 def form_results(form_id: int):
