@@ -128,27 +128,31 @@ body {
   background: rgba(102, 126, 234, 0.08);
 }
 
-/* Make the Links column behave like inline actions (dashboard table) */
+
 .history-table td:last-child {
-  white-space: nowrap;       /* keeps actions on one line */
+  white-space: normal;      
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .history-table td:last-child form {
-  display: inline;           /* form doesn’t break layout */
-  margin-left: 0.5rem;       /* space before delete */
+  display: inline;
+  margin: 0;
 }
+
 
 .history-table td:last-child .link {
-  margin-right: 0.35rem;
+  margin-right: 0;
 }
 
-/* --- Results table wrapping support (for long answers) --- */
-/* Add class="question-cell" and class="answer-cell" in results template */
+
 .history-table th:first-child,
 .history-table td.question-cell {
   width: 30%;
   vertical-align: top;
-  overflow-wrap: anywhere; /* prevent skinny column weirdness */
+  overflow-wrap: anywhere; 
   word-break: break-word;
 }
 
@@ -158,15 +162,15 @@ body {
   vertical-align: top;
 }
 
-/* Wrap long answers + preserve newlines */
+
 .answer-text {
-  white-space: pre-wrap;      /* keeps line breaks + wraps */
-  overflow-wrap: anywhere;    /* breaks long strings if needed */
-  word-break: break-word;     /* fallback */
+  white-space: pre-wrap;      
+  overflow-wrap: anywhere;    
+  word-break: break-word;     
   line-height: 1.4;
 }
 
-/* Forms */
+
 .form {
   display: flex;
   flex-direction: column;
@@ -181,7 +185,7 @@ textarea {
   border: 1px solid #ccc;
 }
 
-/* IMPORTANT: only full-width buttons inside .form */
+
 .form button {
   width: 100%;
   padding: 0.75rem;
