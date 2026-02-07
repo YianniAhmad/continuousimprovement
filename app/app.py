@@ -1,8 +1,9 @@
+# app.py
 import os
 import secrets
 from functools import wraps
 
-from flask import Flask, render_template, request, redirect, url_for, session, abort
+from flask import Flask, render_template, request, redirect, url_for, session, abort, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from openai import OpenAI
 
@@ -14,14 +15,52 @@ from app.database import (
     get_inserted_id,
 )
 
+# -------------------------
+# Email (SendGrid)
+# -------------------------
+def send_email(to_email: str, subject: str, text: str) -> None:
+    api_key = os.getenv("SENDGRID_API_KEY")
+    from_email = os.getenv("FROM_EMAIL")
+
+    # Don't crash app if not configured yet
+    if not api_key or not from_email:
+        print("Email skipped: SENDGRID_API_KEY or FROM_EMAIL not set")
+        return
+
+    try:
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
+
+        message = Mail(
+            from_email=from_email,
+            to_emails=to_email,
+            subject=subject,
+            plain_text_content=text,
+        )
+
+        sg = SendGridAPIClient(api_key)
+        sg.send(message)
+
+    except Exception as e:
+        # Never break the user flow because email failed
+        print(f"SendGrid error: {e}")
+
+
+# -------------------------
+# App setup
+# -------------------------
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-fallback")
 
-
+# Create tables if missing + apply migrations
 init_db()
+
+# Backfill public_id for legacy forms (safe to keep)
 with get_conn() as conn:
     p = placeholder()
-    rows = conn.execute("SELECT id FROM forms WHERE public_id IS NULL OR public_id = ''").fetchall()
+    rows = conn.execute(
+        "SELECT id FROM forms WHERE public_id IS NULL OR public_id = ''"
+    ).fetchall()
     for r in rows:
         conn.execute(
             f"UPDATE forms SET public_id = {p} WHERE id = {p}",
@@ -30,6 +69,9 @@ with get_conn() as conn:
     conn.commit()
 
 
+# -------------------------
+# Helpers
+# -------------------------
 def login_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
@@ -41,10 +83,12 @@ def login_required(view_func):
 
 
 def generate_public_id() -> str:
-
     return secrets.token_urlsafe(6)
 
 
+# -------------------------
+# Routes
+# -------------------------
 @app.route("/")
 def home():
     return render_template("home.html")
@@ -141,8 +185,8 @@ def create_form():
         with get_conn() as conn:
             cur = conn.cursor()
 
-            
-            for _ in range(5):
+            # create a unique public_id (retry a few times)
+            for _ in range(10):
                 public_id = generate_public_id()
                 try:
                     cur.execute(
@@ -156,7 +200,6 @@ def create_form():
                     form_id = get_inserted_id(cur)
                     break
                 except Exception:
-                   
                     continue
             else:
                 raise RuntimeError("Failed to create a unique public_id for the form.")
@@ -172,7 +215,6 @@ def create_form():
         return redirect(url_for("dashboard"))
 
     return render_template("create_form.html")
-
 
 
 @app.route("/forms/<public_id>", methods=["GET", "POST"])
@@ -208,7 +250,6 @@ def form_page(public_id: str):
             return render_template("thank_you.html", form=form)
 
     return render_template("form.html", form=form, questions=questions)
-
 
 
 @app.route("/dashboard/forms/<int:form_id>/results")
@@ -323,12 +364,29 @@ FEEDBACK (Q&A):
 
     summary_text = resp.output_text
 
+    # Save summary
     with get_conn() as conn:
         conn.execute(
             f"INSERT INTO ai_summaries (form_id, summary_text) VALUES ({p}, {p})",
             (form_id, summary_text),
         )
         conn.commit()
+
+    # Email to logged-in form owner (their login email)
+    to_email = session.get("email")
+    if to_email:
+        subject = f"ContinuousCo AI Summary: {form['title']}"
+        body = (
+            f"AI Summary for: {form['title']}\n\n"
+            f"Description: {form['description']}\n\n"
+            f"{summary_text}\n"
+        )
+        try:
+            send_email(to_email, subject, body)
+            flash("AI summary generated and emailed to you.")
+        except Exception as e:
+            print(f"Email send failed: {e}")
+            flash("AI summary generated, but email failed to send.")
 
     return redirect(url_for("form_results", form_id=form_id))
 
@@ -354,6 +412,7 @@ def delete_form(form_id: int):
         )
         conn.commit()
 
+    flash("Form deleted.")
     return redirect(url_for("dashboard"))
 
 

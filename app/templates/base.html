@@ -1,3 +1,4 @@
+<!-- templates/base.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,20 +17,29 @@
   <div class="container">
     <div class="header-row">
       <h1 class="brand"><a href="/" class="brand-link">Continuous Improvement</a></h1>
-      <div class="nav">
-        {% if request.endpoint != 'form_page' %}
+
+      {% if request.endpoint != 'form_page' %}
         <div class="nav">
-            {% if session.get("user_id") %}
+          {% if session.get("user_id") %}
             <a class="link-btn small" href="{{ url_for('dashboard') }}">Dashboard</a>
             <a class="link-btn small" href="{{ url_for('create_form') }}">New Form</a>
             <a class="link-btn small" href="{{ url_for('logout') }}">Logout</a>
-            {% else %}
+          {% else %}
             <a class="link-btn small" href="{{ url_for('login') }}">Login</a>
-            {% endif %}
+          {% endif %}
         </div>
-        {% endif %}
-      </div>
+      {% endif %}
     </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
     {% block content %}{% endblock %}
   </div>

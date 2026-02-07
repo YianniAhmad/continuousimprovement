@@ -3,3 +3,4 @@ gunicorn
 openai
 werkzeug
 psycopg[binary]
+sendgrid==6.11.0
