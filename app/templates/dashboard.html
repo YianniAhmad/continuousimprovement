@@ -13,27 +13,36 @@
           <th>Links</th>
         </tr>
       </thead>
+
       <tbody>
         {% for form in forms %}
           <tr>
             <td>{{ form["title"] }}</td>
             <td>{{ form["created_at"] }}</td>
+
             <td>
-              <a class="link" href="{{ url_for('form_page', public_id=form['public_id'])}}">
-                Public link
-              </a>
-              |
+              {% if form["public_id"] %}
+                <a class="link" href="{{ url_for('form_page', public_id=form['public_id']) }}">
+                  Public link
+                </a>
+              {% else %}
+                <span class="muted">No public link</span>
+              {% endif %}
+
+              <span class="muted">|</span>
+
               <a class="link" href="{{ url_for('form_results', form_id=form['id']) }}">
                 View results
               </a>
-              |
+
+              <span class="muted">|</span>
+
               <form method="post"
                     action="{{ url_for('delete_form', form_id=form['id']) }}"
                     style="display:inline;"
                     onsubmit="return confirm('Delete this form and all its answers? This cannot be undone.');">
                 <button type="submit" class="link-btn danger">Delete</button>
               </form>
-
             </td>
           </tr>
         {% endfor %}
